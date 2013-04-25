@@ -87,6 +87,7 @@ CREATE TABLE property_amenities(
 
 CREATE TABLE users(
 	id serial primary key
+  password varchar(255) NOT NULL
 );
 
 CREATE TABLE newsletters(
@@ -97,6 +98,17 @@ CREATE TABLE user_newsletters(
   id serial primary key,
   user_id int not null,
   newsletter_id int not null
+);
+
+CREATE TABLE services (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE active_services (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    serv_id INT NOT NULL
 );
 
 CREATE TABLE valuestore (

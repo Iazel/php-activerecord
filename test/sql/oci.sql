@@ -89,6 +89,37 @@ CREATE TABLE property_amenities(
   property_id int not null
 );
 
+CREATE SEQUENCE users_seq;
+CREATE TABLE users (
+    id INT PRIMARY KEY,
+    password varchar(255) NOT NULL
+);
+
+CREATE SEQUENCE newsletters_seq;
+CREATE TABLE newsletters (
+    id INT PRIMARY KEY
+);
+
+CREATE SEQUENCE user_newsletters_seq;
+CREATE TABLE user_newsletters (
+    id INT PRIMARY KEY,
+    user_id INT NOT NULL,
+    newsletter_id INT NOT NULL
+);
+
+CREATE SEQUENCE services_seq;
+CREATE TABLE services (
+    id INT PRIMARY KEY,
+    code VARCHAR(255) NOT NULL
+);
+
+CREATE SEQUENCE active_services_seq;
+CREATE TABLE active_services (
+    id INT PRIMARY KEY,
+    user_id INT NOT NULL,
+    serv_id INT NOT NULL
+);
+
 CREATE SEQUENCE valuestore_seq;
 CREATE TABLE valuestore(
   id int primary key,
