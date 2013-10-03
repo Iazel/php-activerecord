@@ -90,6 +90,10 @@ class Table
 		$this->callback->register('after_save', function(Model $model) { $model->reset_dirty(); }, array('prepend' => true));
 	}
 
+    public function connection()
+    {
+        return $this->conn;
+    }
 	public function reestablish_connection($close=true)
 	{
 		// if connection name property is null the connection manager will use the default connection
@@ -404,6 +408,23 @@ class Table
 		return $ret;
 	}
 
+    public function process_value($name, $value)
+    {
+        if( is_array($value) ) {
+            foreach($value as &$v)
+                $v = $this->process_value($name, $v);
+            return $v;
+        }
+        if ( !($value instanceof \DateTime) )
+            return $value;
+
+        if (isset($this->columns[$name]) && $this->columns[$name]->type == Column::DATE)
+            $value = $this->conn->date_to_string($value);
+        else
+            $value = $this->conn->datetime_to_string($value);
+
+        return $value;
+    }
 	private function &process_data($hash)
 	{
 		if (!$hash)
@@ -411,15 +432,7 @@ class Table
 
 		foreach ($hash as $name => &$value)
 		{
-			if ($value instanceof \DateTime)
-			{
-				if (isset($this->columns[$name]) && $this->columns[$name]->type == Column::DATE)
-					$hash[$name] = $this->conn->date_to_string($value);
-				else
-					$hash[$name] = $this->conn->datetime_to_string($value);
-			}
-			else
-				$hash[$name] = $value;
+            $value = $this->process_value($name, $value);
 		}
 		return $hash;
 	}
@@ -564,5 +577,12 @@ class Table
 			trigger_error('static::$getters and static::$setters are deprecated. Please define your setters and getters by declaring methods in your model prefixed with get_ or set_. See
 			http://www.phpactiverecord.org/projects/main/wiki/Utilities#attribute-setters and http://www.phpactiverecord.org/projects/main/wiki/Utilities#attribute-getters on how to make use of this option.', E_USER_DEPRECATED);
 	}
+
+    public function to_s() {
+        return $this->get_fully_qualified_table_name();
+    }
+    public function __toString() {
+        return $this->to_s();
+    }
 };
 ?>

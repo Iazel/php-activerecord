@@ -1424,15 +1424,21 @@ class Model
 	}
 
 	/**
-	 * Alias for self::find('all').
-	 *
-	 * @see find
-	 * @return array array of records found
+     * Start a blank query for the current model
+	 * @return Criteria
 	 */
-	public static function all(/* ... */)
+	public static function all()
 	{
-		return call_user_func_array('static::find',array_merge(array('all'),func_get_args()));
+        return new Criteria( get_called_class() );
 	}
+    /**
+     * Equivalent to Model::all()->where( ... )
+     */
+    public static function where(/* ... */)
+    {
+        $c = static::all();
+        return call_user_func_array( array($c, 'where'), func_get_args() );
+    }
 
 	/**
 	 * Get a count of qualifying records.
@@ -1607,6 +1613,8 @@ class Model
 
 		return $single ? (!empty($list) ? $list[0] : null) : $list;
 	}
+
+    
 
 	/**
 	 * Finder method which will find by a single or array of primary keys for this model.

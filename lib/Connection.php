@@ -291,8 +291,12 @@ abstract class Connection
 	 */
 	public function query($sql, &$values=array())
 	{
-		if ($this->logging)
-			$this->logger->log($sql);
+		if ($this->logging && strpos($sql, 'SELECT ') !== false) {
+            $log = $sql;
+            if( !empty($values) )
+                $log .= "\n" . var_export($values, true);
+            $this->logger->log($log);
+        }
 
 		$this->last_query = $sql;
 
