@@ -67,5 +67,17 @@ class CriteriaTest extends DatabaseTest {
         $authors = Author::where('id')->gte(2)->find();
         $this->assert_not_empty($authors);
     }
+
+    public function test_joins() {
+        $s = Service::all()
+            ->join('categorie_servizio', 'ct')
+            ->join('lista_province', 'prv')
+                ->through('comuni')
+            ->join('caratteristiche_struttura', 'crs')
+            ->join('tariffe_servizio', 'ts')
+            ->join('ubicazione', 'ub')
+            Service::all()
+                ->with('category')->eq(Service::ALLEVAMENTO)
+    }
 }
 ?>

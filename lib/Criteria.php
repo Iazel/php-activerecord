@@ -18,12 +18,25 @@ class Criteria implements \IteratorAggregate {
     public function __construct($model) {
         $this->model = $model;
         $this->table = $model::table();
-        $this->fields_alias = $model::$alias_attribute;
         $this->where = array();
         $this->where_values = array();
 
         $this->limit = false;
         $this->offset = 0;
+    }
+
+    public function join($table = false) {
+        if($table === false)
+            return new Criteria\Join($this, $this->table, true);
+        if( !$this->table->has_relationship($table) )
+            return new Criteria\Join($this, $table);
+        
+        $j = new Criteria\Join($this, $this->table, true);
+        return $j->with_relation($table);
+    }
+    public function _join($t, $str, $required = false) {
+        $this->joins[$t] = ($required === false) ? $str : array($required, $str);
+        return $this;
     }
 
     /**
@@ -44,7 +57,7 @@ class Criteria implements \IteratorAggregate {
      * @return Criteria\Condition 
      */
     public function where($field, $value = false) {
-        $field = $this->real_field_name($field);
+        $field = $this->field_real_name($field);
         if($value === false)
             return new Criteria\Condition($this, $field);
         $this->_raw_condition("$field = ?", $field, $value);
@@ -57,6 +70,14 @@ class Criteria implements \IteratorAggregate {
         foreach($value as $v)
             $this->where_values[] = $this->process_value($field, $v);
         return $this;
+    }
+
+    public function with($rel, $field) {
+        $rel = $this->table->get_relationship($rel, true);
+        $field = $rel->get_table()->field_real_name($field, true);
+        $this->join_relation($rel);
+
+        return new Criteria\Condition($this, $field);
     }
     /**
      * Limit the number of records.
@@ -137,11 +158,8 @@ class Criteria implements \IteratorAggregate {
      * Let use aliased fields for ours query
      * @return string Correct field's name
      */
-    protected function real_field_name($field) {
-        if($field === 'id')
-            return $this->table->pk[0];
-        return array_key_exists($field, $this->fields_alias)
-            ? $this->fields_alias[$field] : $field;
+    protected function field_real_name($field) {
+        return $this->table->field_real_name($field);
     }
     /**
      * Ensure to not mess with values
@@ -166,6 +184,7 @@ class Criteria implements \IteratorAggregate {
         $sql = 'SELECT * FROM '. $this->table->to_s();
         $this
             ->parse_select()
+            ->parse_joins()
             ->parse_where()
             ->parse_limit();
         return $this->sql;
@@ -175,8 +194,36 @@ class Criteria implements \IteratorAggregate {
     }
 
     protected function parse_select() {
-        $this->sql = 'SELECT * FROM '. $this->table->to_s();
+        $t = $this->table->to_s();
+        $this->sql = "SELECT $t.* FROM $t";
         return $this;
+    }
+    protected function parse_joins() {
+        if( empty($this->joins) )
+            return $this;
+
+        $joins = $this->joins;
+        $joined = array($this->table->to_s(false));
+        do {
+            $hit = false;
+            $missed = array();
+            foreach($joins as $j) {
+                if( is_array($j) ) {
+                    if( in_array($j[0], $j) )
+                        $j = $j[1];
+                    else {
+                        $missed[] = $j;
+                        continue;
+                    }
+                }
+                $this->sql .= "\n$j";
+                $hit = true;
+            }
+            if($hit === false)
+                throw Criteria\JoinError::missed($missed);
+
+            $joins = $missed;
+        } while( !empty($joins) );
     }
     protected function parse_where() {
         if( !empty($this->where) )

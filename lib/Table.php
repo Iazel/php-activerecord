@@ -302,6 +302,18 @@ class Table
 		return $table;
 	}
 
+    public function field_real_name($field, $scoped = false) {
+        $m = $this->class;
+        $attrs = $m::$alias_attribute;
+        if($field === 'id')
+            $field = $this->pk[0];
+        elseif( array_key_exists($field, $attrs) )
+            $field = $attrs;
+        $field = $this->conn->quote_name($field);
+
+        return ($scoped) ? $this->to_s() . ".$field" : $field;
+    }
+
 	/**
 	 * Retrieve a relationship object for this table. Strict as true will throw an error
 	 * if the relationship name does not exist.
@@ -578,8 +590,8 @@ class Table
 			http://www.phpactiverecord.org/projects/main/wiki/Utilities#attribute-setters and http://www.phpactiverecord.org/projects/main/wiki/Utilities#attribute-getters on how to make use of this option.', E_USER_DEPRECATED);
 	}
 
-    public function to_s() {
-        return $this->get_fully_qualified_table_name();
+    public function to_s($quote = true) {
+        return $quote ? $this->conn->quote_name($this->table) : $this->table;
     }
     public function __toString() {
         return $this->to_s();
