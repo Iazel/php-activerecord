@@ -1,16 +1,71 @@
 <?php
+/**
+ * Manage logics behind conditions.
+ * You can easily extends this class through `raw` and then injecting your 
+ * own class into ActiveRecord\Criteria.
+ *
+ * Let's say we write a stored mysql function and want to use it in our 
+ * queries, with this kind of interface:
+ *
+ * <code lang="php">
+ * Model::where('field')->match_my_awesome_func_with(10);
+ * </code>
+ *
+ * We could use the `Condition#raw` method, but we need this snippet of code 
+ * in a lot of queries, then the best solution is extends this class and 
+ * then inject it!
+ *
+ * <code lang="php">
+ * class MyCondition extends ActiveRecord\Criteria\Condition {
+ *     public function match_my_awesome_func_with($val) {
+ *         return $this->raw('= MY_AWESOME_FUNC(?)', $val);
+ *     }
+ * }
+ *
+ * ActiveRecord\Criteria::inject_condition_class('MyCondition');
+ * </code>
+ *
+ * Very easy and very flexible.
+ */
 namespace ActiveRecord\Criteria;
 
 class Condition {
-    protected $parent, $field;
-    public function __construct($criteria, $field) {
+    protected
+        $parent, $field, $op, $value;
+    public function __construct($criteria, $field, $table, $logic) {
         $this->parent = $criteria;
-        $this->field = $field;
+        $this->table = $table;
+        $this->logic = $logic;
+        $this->field = $this->table->field_real_name($field);
+        return $this;
     }
     
+    /**
+     * Use this method for condition complex as you wish
+     * @params string $op     Operator. Example: '= ?'
+     * @params mixed  $value  Some value, can be anything convertible to 
+     *                        string
+     */
     public function raw($op, $value) {
-        $field = $this->field;
-        return $this->parent->_raw_condition("$field $op", $field, $value);
+        $this->op = $op;
+        $this->value = &$value;
+        if( !is_array($value) )
+            $value = array($value);
+        foreach($value as &$v)
+            $v = $this->table->process_value($this->field, $v);
+
+        return $this->parent->_add_condition($this);
+    }
+    public function logic() {
+        return $this->logic;
+    }
+    public function value() {
+        return $this->value;
+    }
+    public function to_s($scoped = false, $first = true) {
+        $logic = ($first) ? '' : " $this->logic ";
+        $field = $this->table->quote_name($this->field, $scoped);
+        return "$logic$field $this->op";
     }
     /**
      * field = ?
@@ -73,11 +128,11 @@ class Condition {
      * If $values is only one, it's converted to `#eq`
      * @overload in($array)
      * @params Array $array with more than one element
-     *      field IN(?, ?, ...)
+     * @results field IN(?, ?, ...)
      *
      * @overload in($mixed)
      * @params Mixed $mixed Array with one element or anything else
-     *      alias of `#eq`
+     * @see #eq
      */
     public function any_of(/* ... */) {
         $values = func_get_args();
@@ -97,7 +152,7 @@ class Condition {
     /**
      * field LIKE '%?%'
      */
-    public function like($value) {
+    public function includes($value) {
         return $this->raw("LIKE CONCAT('%', ?, '%')", $value);
     }
     /**
@@ -111,6 +166,14 @@ class Condition {
      */
     public function end_with($value) {
         return $this->raw("LIKE CONCAT('%', ?)", $value);
+    }
+    /**
+     * It's like `eq` but ignore case
+     *
+     * field LIKE '?'
+     */
+    public function like($value) {
+        return $this->raw("LIKE ?", $value);
     }
 }
 ?>

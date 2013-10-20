@@ -302,16 +302,23 @@ class Table
 		return $table;
 	}
 
+    public function quote_name($field, $scoped = false) {
+        $s = '';
+        if($scoped)
+            $s = $this->to_s() . '.';
+        return $s . $this->conn->quote_name($field);
+    }
     public function field_real_name($field, $scoped = false) {
-        $m = $this->class;
-        $attrs = $m::$alias_attribute;
+        $attrs = $this->class->getStaticPropertyValue('alias_attribute');
         if($field === 'id')
             $field = $this->pk[0];
         elseif( array_key_exists($field, $attrs) )
             $field = $attrs;
-        $field = $this->conn->quote_name($field);
 
-        return ($scoped) ? $this->to_s() . ".$field" : $field;
+        if($scoped)
+            $field = $this->quote_name($field, true);
+
+        return $field;
     }
 
 	/**

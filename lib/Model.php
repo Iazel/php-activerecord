@@ -1488,25 +1488,25 @@ class Model
 	}
 
 	/**
-	 * Alias for self::find('first').
+	 * Alias for ::all()->first().
 	 *
-	 * @see find
+	 * @see all
 	 * @return Model The first matched record or null if not found
 	 */
-	public static function first(/* ... */)
+	public static function first()
 	{
-		return call_user_func_array('static::find',array_merge(array('first'),func_get_args()));
+		return static::all()->first();
 	}
 
 	/**
-	 * Alias for self::find('last')
+	 * Alias for ::all()->last()
 	 *
-	 * @see find
+	 * @see all
 	 * @return Model The last matched record or null if not found
 	 */
-	public static function last(/* ... */)
+	public static function last()
 	{
-		return call_user_func_array('static::find',array_merge(array('last'),func_get_args()));
+		return static::all()->last();
 	}
 
 	/**
